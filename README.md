@@ -4,7 +4,7 @@
 
 # VmambaIR: Visual State Space Model for Image Restoration
 
-[Yuan Shi](https://github.com/shiyuan7), [Bin Xia](https://github.com/Zj-BinXia), [Xiaoyu Jin](), [Xing Wang], [Tianyu Zhao], [Xin Xia], [Xuefeng Xiao], and [Wenming Yang](https://scholar.google.com/citations?user=vsE4nKcAAAAJ&hl=zh-CN), "VmambaIR: Visual State Space Model for Image Restoration", arXiv, 2024
+[Yuan Shi](https://github.com/shiyuan7), [Bin Xia](https://github.com/Zj-BinXia), [Xiaoyu Jin](https://github.com/xyjin01), [Xing Wang], [Tianyu Zhao], [Xin Xia], [Xuefeng Xiao], and [Wenming Yang](https://scholar.google.com/citations?user=vsE4nKcAAAAJ&hl=zh-CN), "VmambaIR: Visual State Space Model for Image Restoration", arXiv, 2024
 
 [[arXiv]()] [[supplementary material]()] [[visual results]()] [pretrained models]
 
@@ -21,14 +21,17 @@
 ---
 Single Imgae Super-Resolution
 
-[<img src="figs/img_005_mamba.png" height="216"/>](https://imgsli.com/MjQ4MjE2) [<img src="figs/img_065_mamba.png" height="216"/>](https://imgsli.com/MjQ4MjE5) [<img src="figs/img_061_mamba.png" height="216"/>](https://imgsli.com/MjQ4MjIw) [<img src="figs/img_098_mamba.png" height="216"/>](https://imgsli.com/MjQ4MjIx)
+[<img src="figs/Snipaste_2024-03-18_22-28-23.png" height="216"/>](https://imgsli.com/MjQ4MjI5) [<img src="figs/Snipaste_2024-03-18_22-22-34.png" height="216"/>](https://imgsli.com/MjQ4MjI2) [<img src="figs/Snipaste_2024-03-18_22-25-10.png" height="216"/>](https://imgsli.com/MjQ4MjI3) [<img src="figs/Snipaste_2024-03-18_22-26-41.png" height="216"/>](https://imgsli.com/MjQ4MjI4)
 
 
 Real-World Imgae Super-Resolution
 
-[<img src="figs/0802_mamba.png" height="216"/>](https://imgsli.com/MjQ4MjA4) [<img src="figs/0849_mamba.png" height="216"/>](https://imgsli.com/MjQ4MjEw) [<img src="figs/0891_mamba.png" height="216"/>](https://imgsli.com/MjQ4MjEx) [<img src="figs/0893_mamba.png" height="216"/>](https://imgsli.com/MjIyMzA4)
+[<img src="figs/Snipaste_2024-03-18_22-29-05.png" height="216"/>](https://imgsli.com/MjQ4MjMw) [<img src="figs/Snipaste_2024-03-18_22-34-00.png" height="216"/>](https://imgsli.com/MjQ4MjMx) [<img src="figs/Snipaste_2024-03-18_22-34-25.png" height="216"/>](https://imgsli.com/MjQ4MjMy) [<img src="figs/Snipaste_2024-03-18_22-36-36.png" height="216"/>](https://imgsli.com/MjQ4MjM0)
 
 
+Image Deraining
+
+[<img src="figs/Snipaste_2024-03-18_22-37-57.png" height="216"/>](https://imgsli.com/MjQ4MjM3) [<img src="figs/Snipaste_2024-03-18_22-40-59.png" height="216"/>](https://imgsli.com/MjQ4MjM5) [<img src="figs/Snipaste_2024-03-18_22-42-11.png" height="216"/>](https://imgsli.com/MjQ4MjQz) [<img src="figs/Snipaste_2024-03-18_22-44-20.png" height="216"/>](https://imgsli.com/MjQ4MjQ1)
 
 ---
 
