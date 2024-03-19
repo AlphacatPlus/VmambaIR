@@ -1,5 +1,5 @@
 <div align="center">
-<p align="center"> <img src="figs/WechatIMG2431.jpg" width="200px"> </p>
+<p align="center"> <img src="figs/logo2.png" width="200px"> </p>
 </div>
 
 # VmambaIR: Visual State Space Model for Image Restoration
