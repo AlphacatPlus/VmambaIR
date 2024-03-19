@@ -4,7 +4,7 @@
 
 # VmambaIR: Visual State Space Model for Image Restoration
 
-[Yuan Shi](https://github.com/shiyuan7), [Bin Xia](https://github.com/Zj-BinXia), [Xiaoyu Jin](https://github.com/xyjin01), [Xing Wang], [Tianyu Zhao], [Xin Xia], [Xuefeng Xiao], and [Wenming Yang](https://scholar.google.com/citations?user=vsE4nKcAAAAJ&hl=zh-CN), "VmambaIR: Visual State Space Model for Image Restoration", arXiv, 2024
+[Yuan Shi](https://github.com/shiyuan7), [Bin Xia](https://github.com/Zj-BinXia), [Xiaoyu Jin](https://github.com/xyjin01), [Xing Wang](https://github.com/AlphacatPlus/VmambaIR), [Tianyu Zhao](https://github.com/AlphacatPlus/VmambaIR), [Xin Xia](https://github.com/AlphacatPlus/VmambaIR), [Xuefeng Xiao](https://github.com/AlphacatPlus/VmambaIR), and [Wenming Yang](https://scholar.google.com/citations?user=vsE4nKcAAAAJ&hl=zh-CN), "VmambaIR: Visual State Space Model for Image Restoration", arXiv, 2024
 
 [[arXiv](https://arxiv.org/abs/2403.11423)] [[supplementary material]()] [[visual results]()] [pretrained models]
 
