@@ -19,12 +19,12 @@
 ![](figs/Snipaste_2024-03-18_21-18-39.png)
 
 ---
-Single Imgae Super-Resolution
+Single Image Super-Resolution
 
 [<img src="figs/Snipaste_2024-03-18_22-28-23.png" height="216"/>](https://imgsli.com/MjQ4MjI5) [<img src="figs/Snipaste_2024-03-18_22-22-34.png" height="216"/>](https://imgsli.com/MjQ4MjI2) [<img src="figs/Snipaste_2024-03-18_22-25-10.png" height="216"/>](https://imgsli.com/MjQ4MjI3) [<img src="figs/Snipaste_2024-03-18_22-26-41.png" height="216"/>](https://imgsli.com/MjQ4MjI4)
 
 
-Real-World Imgae Super-Resolution
+Real-World Image Super-Resolution
 
 [<img src="figs/Snipaste_2024-03-18_22-29-05.png" height="216"/>](https://imgsli.com/MjQ4MjMw) [<img src="figs/Snipaste_2024-03-18_22-34-00.png" height="216"/>](https://imgsli.com/MjQ4MjMx) [<img src="figs/Snipaste_2024-03-18_22-34-25.png" height="216"/>](https://imgsli.com/MjQ4MjMy) [<img src="figs/Snipaste_2024-03-18_22-36-36.png" height="216"/>](https://imgsli.com/MjQ4MjM0)
 
