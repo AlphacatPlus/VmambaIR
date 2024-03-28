@@ -121,7 +121,7 @@ We achieved state-of-the-art performance on multiple image restoration tasks. De
 If you find the code helpful in your resarch or work, please cite the following paper(s).
 
 ```
-@article{chen2023image,
+@article{shi2024vmambair,
   title={VmambaIR: Visual State Space Model for Image Restoration},
   author={Shi, Yuan and Xia, Bin and Jin, Xiaoyu and Wang, Xing and Zhao, Tianyu and Xia, Xin and Xiao, Xuefeng and Yang, Wenming},
   journal={arXiv preprint arXiv:2403.11423},
