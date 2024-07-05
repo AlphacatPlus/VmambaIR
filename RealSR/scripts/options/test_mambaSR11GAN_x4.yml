@@ -1,0 +1,61 @@
+# general settings
+name: test_mambaSR11GAN2
+model_type: MambaRealSRGANtest
+scale: 4
+num_gpu: auto  # auto: can infer from your visible devices automatically. official: 4 GPUs
+manual_seed: 0
+
+
+
+# dataset and data loader settings
+datasets:
+  #test_1:
+  #  name: NTIRE2020-Track1
+  #  type: SingleImageDataset
+  #  dataroot_lq: /mnt/bn/shiyuan-arnold/dataset/NTIRE2020/track1-valid-input
+  #  io_backend:
+  #    type: disk
+
+  test_2:
+    name: AIM19
+    type: SingleImageDataset
+    dataroot_lq: /mnt/bn/shiyuan-arnold/dataset/AIM19/AIM19/valid-input-noisy
+    io_backend:
+      type: disk
+
+# network structures
+network_g:
+  type: MambaRealSR11
+  inp_channels: 3
+  out_channels: 3
+  dim: 48
+  num_blocks: [6,2,2,1]
+  num_refinement_blocks: 6
+  heads: [1,2,4,8]
+  ffn_expansion_factor: 2.66
+  bias: False
+  LayerNorm_type: WithBias
+
+network_d:
+  type: UNetDiscriminatorSN
+  num_in_ch: 3
+  num_feat: 64
+  skip_connection: True
+
+# path
+path:
+  pretrain_network_g: /mnt/bn/shiyuan-arnold/code/VmambaIR/RealSR/experiments/MambaRealSR11GAN/models/net_g_360000.pth
+  param_key_g: params_ema
+  strict_load_g: False
+
+
+
+val:
+  window_size: 8
+  save_img: True
+  suffix: ~  # add suffix to saved images, if None, use exp name
+
+
+
+
+

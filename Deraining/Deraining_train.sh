@@ -1,0 +1,1 @@
+bash ./train.sh Deraining/Options/Deraining_mamber34.yml

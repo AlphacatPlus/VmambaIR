@@ -1,0 +1,109 @@
+# general settings
+name: test_MambaSISR15GAN3
+model_type: MambaSISRGANModel
+scale: 4
+num_gpu: auto  # auto: can infer from your visible devices automatically. official: 4 GPUs
+manual_seed: 0
+
+
+
+datasets:
+  test_1:  # the 1st test dataset
+    name: Set5
+    type: PairedImageDataset
+    dataroot_gt: /mnt/bn/shiyuan-arnold/dataset/DiffIR/SISR/Set5/HR
+    dataroot_lq: /mnt/bn/shiyuan-arnold/dataset/DiffIR/SISR/Set5/LR
+    filename_tmpl: '{}'
+    io_backend:
+      type: disk
+
+  test_2:  # the 2nd test dataset
+    name: Set14
+    type: PairedImageDataset
+    dataroot_gt: /mnt/bn/shiyuan-arnold/dataset/DiffIR/SISR/Set14/HR
+    dataroot_lq: /mnt/bn/shiyuan-arnold/dataset/DiffIR/SISR/Set14/LR
+    filename_tmpl: '{}'
+    io_backend:
+      type: disk
+#
+
+  test_3:  # the 4th test dataset
+    name: Urban100
+    type: PairedImageDataset
+    dataroot_gt: /mnt/bn/shiyuan-arnold/dataset/DiffIR/SISR/Urban100/HR
+    dataroot_lq: /mnt/bn/shiyuan-arnold/dataset/DiffIR/SISR/Urban100/LR
+    filename_tmpl: '{}'
+    io_backend:
+      type: disk
+
+  test_4:  # the 5th test dataset
+    name: Manga109
+    type: PairedImageDataset
+    dataroot_gt: /mnt/bn/shiyuan-arnold/dataset/DiffIR/SISR/Manga109/HR
+    dataroot_lq: /mnt/bn/shiyuan-arnold/dataset/DiffIR/SISR/Manga109/LR
+    io_backend:
+      type: disk
+
+  test_5:  # the 5th test dataset
+    name: General100
+    type: PairedImageDataset
+    dataroot_gt: /mnt/bn/shiyuan-arnold/dataset/DiffIR/SISR/General100/HR
+    dataroot_lq: /mnt/bn/shiyuan-arnold/dataset/DiffIR/SISR/General100/LR
+    io_backend:
+      type: disk
+
+  test_6:  # the 5th test dataset
+    name: DIV2K100
+    type: PairedImageDataset
+    dataroot_gt: /mnt/bn/shiyuan-arnold/dataset/DiffIR/SISR/DIV2K100/HR
+    dataroot_lq: /mnt/bn/shiyuan-arnold/dataset/DiffIR/SISR/DIV2K100/LR
+    io_backend:
+      type: disk
+
+
+# network structures
+network_g:
+  type: MambaSISR6
+  inp_channels: 3
+  out_channels: 3
+  dim: 48
+  num_blocks: [15,1,1,1]
+  num_refinement_blocks: 15
+  heads: [1,2,4,8]
+  ffn_expansion_factor: 2.66
+  bias: False
+  LayerNorm_type: WithBias
+
+network_d:
+  type: UNetDiscriminatorSN
+  num_in_ch: 3
+  num_feat: 64
+  skip_connection: True
+
+# path
+path:
+  # use the pre-trained Real-ESRNet model
+  pretrain_network_g: /mnt/bn/shiyuan-arnold/code/VmambaIR/SRGAN/experiments/MambaSISR15GAN_x4/models/net_g_280000.pth
+  param_key_g: params_ema
+  strict_load_g: True
+
+
+# validation settings
+val:
+  window_size: 8
+  save_img: True
+  suffix: ~  # add suffix to saved images, if None, use exp name
+
+  metrics:
+    psnr: # metric name, can be arbitrary
+      type: calculate_psnr
+      crop_border: 4
+      test_y_channel: true
+    ssim:
+      type: calculate_ssim
+      crop_border: 4
+      test_y_channel: true
+
+
+
+

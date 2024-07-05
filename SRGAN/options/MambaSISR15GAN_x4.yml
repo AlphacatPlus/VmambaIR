@@ -1,0 +1,162 @@
+# general settings
+name: MambaSISR15GAN_x4
+model_type: MambaSISRGANModel
+scale: 4
+num_gpu: auto  # auto: can infer from your visible devices automatically. official: 4 GPUs
+manual_seed: 0
+
+gt_size: 256
+# dataset and data loader settings
+datasets:
+  train:
+    name: DF2K
+    type: PairedImageDataset
+    dataroot_gt: /mnt/bn/shiyuan-arnold/dataset/DiffIR/realSR/DF2K_multiscale_sub
+    dataroot_lq: /mnt/bn/shiyuan-arnold/dataset/DiffIR/realSR/DF2K_multiscale_sub/X4
+    meta_info_file: /mnt/bn/shiyuan-arnold/dataset/DiffIR/realSR/meta_info_DF2Kmultiscale_4xpair_sub.txt
+    # (for lmdb)
+    # dataroot_gt: datasets/DIV2K/DIV2K_train_HR_sub.lmdb
+    # dataroot_lq: datasets/DIV2K/DIV2K_train_LR_bicubic_X4_sub.lmdb
+    filename_tmpl: '{}'
+    io_backend:
+      type: disk
+      # (for lmdb)
+      # type: lmdb
+
+    gt_size: 256
+    use_hflip: true
+    use_rot: true
+
+    # data loader
+    num_worker_per_gpu: 8
+    batch_size_per_gpu: 8
+    dataset_enlarge_ratio: 100
+    prefetch_mode: ~
+
+  # Uncomment these for validation
+  val_1:
+    name: Urban100
+    type: PairedImageDataset
+    dataroot_gt: /mnt/bn/shiyuan-arnold/dataset/DiffIR/SISR/Urban100/HR
+    dataroot_lq: /mnt/bn/shiyuan-arnold/dataset/DiffIR/SISR/Urban100/LR
+    # filename_tmpl: '{}x4'
+    io_backend:
+      type: disk
+  
+  val_2:
+    name: Set5
+    type: PairedImageDataset
+    dataroot_gt: /mnt/bn/shiyuan-arnold/dataset/DiffIR/SISR/Set5/HR
+    dataroot_lq: /mnt/bn/shiyuan-arnold/dataset/DiffIR/SISR/Set5/LR
+    io_backend:
+      type: disk
+
+# network structures
+network_g:
+  type: MambaSISR6
+  inp_channels: 3
+  out_channels: 3
+  dim: 48
+  num_blocks: [15,1,1,1]
+  num_refinement_blocks: 15
+  heads: [1,2,4,8]
+  ffn_expansion_factor: 2.66
+  bias: False
+  LayerNorm_type: WithBias
+
+network_d:
+  type: UNetDiscriminatorSN
+  num_in_ch: 3
+  num_feat: 64
+  skip_connection: True
+
+# path
+path:
+  pretrain_network_g: /mnt/bn/shiyuan-arnold/code/VmambaIR/SRGAN/experiments/MambaSISR15_x4_archived_20240618_203930/models/net_g_100000.pth
+  param_key_g: params_ema
+  strict_load_g: true
+  resume_state: ~
+
+# training settings
+train:
+  ema_decay: 0.999
+  optim_g:
+    type: Adam
+    lr: !!float 2e-4
+    weight_decay: 0
+    betas: [0.9, 0.99]
+  optim_d:
+    type: Adam
+    lr: !!float 1e-4
+    weight_decay: 0
+    betas: [0.9, 0.99]
+
+  scheduler:
+    type: MultiStepLR
+    milestones: [ 150000]
+    gamma: 0.5
+
+  total_iter: 300000
+  lr_sr: !!float 2e-4
+  gamma_sr: 0.5
+  lr_decay_sr: 225000
+  warmup_iter: -1  # no warm up
+
+  # losses
+  pixel_opt:
+    type: L1Loss
+    loss_weight: 1.0
+    reduction: mean
+  # perceptual loss (content and style losses)
+  perceptual_opt:
+    type: PerceptualLoss
+    layer_weights:
+      # before relu
+      'conv1_2': 0.1
+      'conv2_2': 0.1
+      'conv3_4': 1
+      'conv4_4': 1
+      'conv5_4': 1
+    vgg_type: vgg19
+    use_input_norm: true
+    perceptual_weight: !!float 1.0
+    style_weight: 0
+    range_norm: false
+    criterion: l1
+  # gan loss
+  gan_opt:
+    type: GANLoss
+    gan_type: vanilla
+    real_label_val: 1.0
+    fake_label_val: 0.0
+    loss_weight: !!float 1.0
+
+  net_d_iters: 1
+  net_d_init_iters: 0
+
+# Uncomment these for validation
+# validation settings
+val:
+  window_size: 8
+  val_freq: !!float 1e4
+  save_img: False
+
+  metrics:
+    psnr: # metric name
+      type: calculate_psnr
+      crop_border: 0
+      test_y_channel: true
+
+# logging settings
+logger:
+  print_freq: 1000
+  save_checkpoint_freq: !!float 1e4
+  use_tb_logger: true
+  wandb:
+    project: ~
+    resume_id: ~
+
+# dist training settings
+dist_params:
+  backend: nccl
+  port: 29500

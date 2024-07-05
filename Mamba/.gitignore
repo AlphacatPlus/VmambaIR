@@ -1,0 +1,26 @@
+# global
+**/__pycache__
+**/_ignore
+**/.dist_test
+**/.pytest_cache
+**/*.egg-info
+**/*.TAG
+**/dist
+**/*.so
+*.so
+**/build
+**/tmp
+**/output
+**/work_dirs
+logs
+ckpts
+log
+ckpt
+
+
+kernels/selective_scan/1.log
+kernels/selective_scan/test_selective_scan_speed.py
+kernels/selective_scan/test_selective_scan_easy.py
+kernels/selective_scan/ssmtriton.py
+test.sh
+kernels/selective_scan/ssmjax.py
