@@ -131,5 +131,5 @@ If you find the code helpful in your resarch or work, please cite the following 
 
 ## <a name="acknowledgements"></a>💡 Acknowledgements
 
-This code is built on [BasicSR](https://github.com/XPixelGroup/BasicSR), [Vmamba](https://github.com/MzeroMiko/VMamba).
+This code is built on [BasicSR](https://github.com/XPixelGroup/BasicSR), [Vmamba](https://github.com/MzeroMiko/VMamba), [Restormer](https://github.com/swz30/Restormer) and [DiffIR](https://github.com/Zj-BinXia/DiffIR). We thank them all for their excellent work.
 
