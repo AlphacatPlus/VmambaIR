@@ -6,7 +6,7 @@ import os
 import subprocess
 import time
 
-version_file = 'DiffIR/version.py'
+version_file = 'VmambaIR/version.py'
 
 
 def readme():

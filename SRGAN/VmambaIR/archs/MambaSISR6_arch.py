@@ -6,12 +6,9 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from pdb import set_trace as stx
 import numbers
 
 from einops import rearrange, repeat
-from functools import partial
-from timm.models.layers import DropPath, trunc_normal_
 
 import VmambaIR.archs.common as common
 
@@ -19,13 +16,8 @@ from basicsr.utils.registry import ARCH_REGISTRY
 
 import math
 import copy
-from fvcore.nn import FlopCountAnalysis, flop_count_str, flop_count, parameter_count
+from fvcore.nn import flop_count, parameter_count
 
-
-
-#from selective_scan import selective_scan_fn as selective_scan_fn_v1
-
-######v1 selective_scan_fn_v1
 
 import selective_scan_cuda_core as selective_scan_cuda
 
@@ -75,7 +67,6 @@ class SelectiveScanFn(torch.autograd.Function):
             dout = dout.contiguous()
         du, ddelta, dA, dB, dC, dD, ddelta_bias, *rest = selective_scan_cuda.bwd(
             u, delta, A, B, C, D, delta_bias, dout, x, ctx.delta_softplus, 1
-            # u, delta, A, B, C, D, delta_bias, dout, x, ctx.delta_softplus, ctx.nrows,
         )
         dB = dB.squeeze(1) if getattr(ctx, "squeeze_B", False) else dB
         dC = dC.squeeze(1) if getattr(ctx, "squeeze_C", False) else dC
@@ -262,24 +253,18 @@ class SS2D_1(nn.Module):
         """
         factory_kwargs = {"device": None, "dtype": None}
         super().__init__()
-        #d_model model dim
         d_expand = int(ssm_ratio * d_model)
-        #d_inner  dim in model, for channel it should be 2
         d_inner = int(min(ssm_rank_ratio, ssm_ratio) * d_model) if ssm_rank_ratio > 0 else d_expand
         self.softmax_version = softmax_version
         self.dt_rank = math.ceil(d_model / 16) if dt_rank == "auto" else dt_rank
-        self.d_state = math.ceil(d_model / 6) if d_state == "auto" else d_state # 20240109
+        self.d_state = math.ceil(d_model / 6) if d_state == "auto" else d_state
         self.d_conv = d_conv
 
-        #cccc
         dc_inner = 4 
-        self.dtc_rank = 6 #6
-        self.dc_state = 16 #16
-        #self.conv_innerc =  nn.Conv2d(in_channels=1, out_channels=dc_inner, kernel_size=1, stride=1, padding=0)
-        #self.conv_innerc = nn.Linear(1, dc_inner, bias=bias, **factory_kwargs)
+        self.dtc_rank = 6
+        self.dc_state = 16
         self.conv_cin = nn.Conv2d(in_channels=1, out_channels=dc_inner, kernel_size=1, stride=1, padding=0)
         self.conv_cout = nn.Conv2d(in_channels=dc_inner, out_channels=1, kernel_size=1, stride=1, padding=0)
-        #self.conv_outc = nn.Conv2d(in_channels=2, out_channels=1, kernel_size=1, stride=1, padding=0)
 
         self.forward_core=self.forward_corev1
 
@@ -316,14 +301,14 @@ class SS2D_1(nn.Module):
             nn.Linear(d_inner, (self.dt_rank + self.d_state * 2), bias=False, **factory_kwargs)
             for _ in range(self.K)
         ]
-        self.x_proj_weight = nn.Parameter(torch.stack([t.weight for t in self.x_proj], dim=0)) # (K, N, inner)
+        self.x_proj_weight = nn.Parameter(torch.stack([t.weight for t in self.x_proj], dim=0))
         del self.x_proj
         # xc proj ============================
         self.xc_proj = [
             nn.Linear(dc_inner, (self.dtc_rank + self.dc_state * 2), bias=False, **factory_kwargs)
             for _ in range(self.KC)
         ]
-        self.xc_proj_weight = nn.Parameter(torch.stack([tc.weight for tc in self.xc_proj], dim=0)) # (K, N, inner)
+        self.xc_proj_weight = nn.Parameter(torch.stack([tc.weight for tc in self.xc_proj], dim=0))
         del self.xc_proj
 
 
@@ -332,8 +317,8 @@ class SS2D_1(nn.Module):
             self.dt_init(self.dt_rank, d_inner, dt_scale, dt_init, dt_min, dt_max, dt_init_floor, **factory_kwargs)
             for _ in range(self.K)
         ]
-        self.dt_projs_weight = nn.Parameter(torch.stack([t.weight for t in self.dt_projs], dim=0)) # (K, inner, rank)
-        self.dt_projs_bias = nn.Parameter(torch.stack([t.bias for t in self.dt_projs], dim=0)) # (K, inner)
+        self.dt_projs_weight = nn.Parameter(torch.stack([t.weight for t in self.dt_projs], dim=0))
+        self.dt_projs_bias = nn.Parameter(torch.stack([t.bias for t in self.dt_projs], dim=0))
         del self.dt_projs
         
         # A, D =======================================
@@ -371,8 +356,6 @@ class SS2D_1(nn.Module):
         inv_dt = dt + torch.log(-torch.expm1(-dt))
         with torch.no_grad():
             dt_proj.bias.copy_(inv_dt)
-        # Our initialization would set all Linear.bias to zero, need to mark this one as _no_reinit
-        # dt_proj.bias._no_reinit = True
         
         return dt_proj
 
@@ -416,53 +399,29 @@ class SS2D_1(nn.Module):
         L = H * W
 
         def cross_scan_2d(x):
-            # (B, C, H, W) => (B, K, C, H * W) with K = len([HW, WH, FHW, FWH])
-            x_hwwh = torch.stack([x.flatten(2, 3), x.transpose(dim0=2, dim1=3).contiguous().flatten(2, 3)], dim=1) #一个h,w展开，一个w,h展开，然后堆在一起
-            xs = torch.cat([x_hwwh, torch.flip(x_hwwh, dims=[-1])], dim=1) # (b, k, d, l) #把上面那俩再翻译下，然后堆在一起
+            x_hwwh = torch.stack([x.flatten(2, 3), x.transpose(dim0=2, dim1=3).contiguous().flatten(2, 3)], dim=1)
+            xs = torch.cat([x_hwwh, torch.flip(x_hwwh, dims=[-1])], dim=1)
             return xs 
         
-        #四个方向
         if self.K == 4:
-            # K = 4
-            xs = cross_scan_2d(x) # (b, k, d, l) #[batch_size, 4, channels, height * width]
-
-            #print("x shape", x.shape) # 8,96,128,128
-            #print("xs shape", xs.shape) # 8,4,96, 16384
-            #print("Ac_logs shape", self.A_logs.shape) #384,16
-            #print("dtc_projs_weight shape", self.dt_projs_weight.shape) #4,96,6
-            #print("xc_proj_weight shape", self.x_proj_weight.shape) #4,38,96
-            #print("Dsc shape", self.Ds.shape) # 384
-            #print("dtc_projs_bias shape", self.dt_projs_bias.shape) #4,96
+            xs = cross_scan_2d(x)
 
             x_dbl = torch.einsum("b k d l, k c d -> b k c l", xs, self.x_proj_weight)
-            # x_dbl = x_dbl + self.x_proj_bias.view(1, K, -1, 1)
             dts, Bs, Cs = torch.split(x_dbl, [self.dt_rank, self.d_state, self.d_state], dim=2)
             dts = torch.einsum("b k r l, k d r -> b k d l", dts, self.dt_projs_weight)
 
-            xs = xs.view(B, -1, L) # (b, k * d, l)
-            dts = dts.contiguous().view(B, -1, L) # (b, k * d, l)
-            As = -torch.exp(self.A_logs.float())  # (k * d, d_state)
-            Ds = self.Ds # (k * d)
-            dt_projs_bias = self.dt_projs_bias.view(-1) # (k * d)
+            xs = xs.view(B, -1, L)
+            dts = dts.contiguous().view(B, -1, L)
+            As = -torch.exp(self.A_logs.float())
+            Ds = self.Ds
+            dt_projs_bias = self.dt_projs_bias.view(-1)
 
-            # assert len(xs.shape) == 3 and len(dts.shape) == 3 and len(Bs.shape) == 4 and len(Cs.shape) == 4
-            # assert len(As.shape) == 2 and len(Ds.shape) == 1 and len(dt_projs_bias.shape) == 1
-            # print(self.Ds.dtype, self.A_logs.dtype, self.dt_projs_bias.dtype, flush=True) # fp16, fp16, fp16
-
-            #print("xs shape", xs.shape) #8,768,1024
-            #print("dts shape", dts.shape) #8, 768, 1024
-            #print("As shape", As.shape)#768, 16
-            #print("Bs shape", Bs.shape)#8, 4, 16, 1024
-            #print("Cs shape", Cs.shape)#8, 4, 16, 1024
-            #print("Ds shape", Ds.shape)#768
-            #print("dt_projs_bias shape", dt_projs_bias.shape) #768
             out_y = self.selective_scan(
                 xs, dts, 
                 As, Bs, Cs, Ds,
                 delta_bias=dt_projs_bias,
                 delta_softplus=True,
             ).view(B, 4, -1, L)
-            # assert out_y.dtype == torch.float16
 
 
         inv_y = torch.flip(out_y[:, 2:4], dims=[-1]).view(B, 2, -1, L)
@@ -481,34 +440,21 @@ class SS2D_1(nn.Module):
 
         b,d,h,w = xc.shape
         
-        #xc = self.pooling(xc).squeeze(-1).permute(0,2,1).contiguous() #b,1,d, >1!
-        #print("xc shape", xc.shape) # 8,1,96
-        xc = self.pooling(xc) #b,d,1,1
-        xc = xc.permute(0,2,1,3).contiguous() #b,1,d,1
-        xc = self.conv_cin(xc) #b,4,d,1
-        xc = xc.squeeze(-1) #b,4,d
+        xc = self.pooling(xc)
+        xc = xc.permute(0,2,1,3).contiguous()
+        xc = self.conv_cin(xc)
+        xc = xc.squeeze(-1)
 
-        #xc = xc.permute(0,2,1).contiguous()
-        #xc = self.conv_innerc(xc)
-        #xc = xc.permute(0,2,1).contiguous()
 
-        B, D, L = xc.shape #b,1,c
-        D, N = self.Ac_logs.shape #2,16
-        K, D, R = self.dtc_projs_weight.shape #2,1,6
+        B, D, L = xc.shape 
+        D, N = self.Ac_logs.shape 
+        K, D, R = self.dtc_projs_weight.shape 
 
-        #print("Ac_logs shape", self.Ac_logs.shape) #2,16
-        #print("dtc_projs_weight shape", self.dtc_projs_weight.shape) #2,1,6
-        #print("xc_proj_weight shape", self.xc_proj_weight.shape) #2,38,1
-        #print("Dsc shape", self.Dsc.shape) # 2
-        #print("dtc_projs_bias shape", self.dtc_projs_bias.shape) #2,1
-
-        xsc = torch.stack([xc, torch.flip(xc, dims=[-1])], dim=1) #input:b,d,l output:b,2,d,l
-        #print("xsc shape", xsc.shape) # 8,2,1,96
+        xsc = torch.stack([xc, torch.flip(xc, dims=[-1])], dim=1) 
 
         xc_dbl = torch.einsum("b k d l, k c d -> b k c l", xsc, self.xc_proj_weight) #8,2,1,96; 2,38,1 ->8,2,38,96
         
         dts, Bs, Cs = torch.split(xc_dbl, [self.dtc_rank, self.dc_state, self.dc_state], dim=2) # 8,2,38,96-> 6,16,16
-        #dts:8,2,6,96 bs,cs:8,2,16,96
         dts = torch.einsum("b k r l, k d r -> b k d l", dts, self.dtc_projs_weight).contiguous()
 
         xsc = xsc.view(B, -1, L) # (b, k * d, l) 8,2,96
@@ -517,18 +463,6 @@ class SS2D_1(nn.Module):
         Ds = self.Dsc # (k * d) 2 
         dt_projs_bias = self.dtc_projs_bias.view(-1) # (k * d)2
 
-        # assert len(xs.shape) == 3 and len(dts.shape) == 3 and len(Bs.shape) == 4 and len(Cs.shape) == 4
-        # assert len(As.shape) == 2 and len(Ds.shape) == 1 and len(dt_projs_bias.shape) == 1
-        # print(self.Ds.dtype, self.A_logs.dtype, self.dt_projs_bias.dtype, flush=True) # fp16, fp16, fp16
-        
-
-        #print("channel xs shape", xsc.shape) #8, 2, 192
-        #print("channel dts shape", dts.shape)#8, 2, 192
-        #print("channel As shape", As.shape)#2, 16
-        #print("channel Bs shape", Bs.shape)#8, 2, 16, 192
-        #print("channel Cs shape", Cs.shape)#8, 2, 16, 192
-        #print("channel Ds shape", Ds.shape)#2
-        #print("channel dt_projs_bias shape", dt_projs_bias.shape) #2
         out_y = self.selective_scanC(
             xsc, dts, 
             As, Bs, Cs, Ds,
@@ -537,30 +471,19 @@ class SS2D_1(nn.Module):
         ).view(B, 2, -1, L)
 
         y = out_y[:, 0].float() + torch.flip(out_y[:, 1], dims=[-1]).float()
-        #y = xsc[:, 0].float() + torch.flip(xsc[:, 1], dims=[-1]).float()
 
 
-        #y: b,4,d
-        y = y.unsqueeze(-1) # b,4,d,1
-        y = self.conv_cout(y) # b,1,d,1
-        y = y.transpose(dim0=1, dim1=2).contiguous() # b,d,1,1
+        y = y.unsqueeze(-1) 
+        y = self.conv_cout(y) 
+        y = y.transpose(dim0=1, dim1=2).contiguous()
         y = self.channel_norm(y)
         y = y.to(xc.dtype)
 
-        #y = y.transpose(dim0=1, dim1=2).contiguous().unsqueeze(-1).contiguous()
-        #y = self.channel_norm(y)
-        #y = y.to(xc.dtype)
-
-        #y = y.permute(0,2,1,3).contiguous()
-        #y = self.conv_outc(y)
-        #y = y.permute(0,2,1,3).contiguous()
         
         return y
 
 
     def forward(self, x: torch.Tensor, **kwargs):
-        #input: b,d,h,w
-        #output: b,d,h,w
         xz = self.in_conv(x)
         x, z = xz.chunk(2, dim=1) # (b, d, h, w)
         if not self.softmax_version:
@@ -568,7 +491,7 @@ class SS2D_1(nn.Module):
         x = self.act(self.conv2d(x)) # (b, d, h, w)
         y1 = self.forward_core(x)
         y2 = y1 * z
-        c = self.cforward_core(y2)#x:b,d,h,w; output:b,d,1,1
+        c = self.cforward_core(y2)
         y3 = y2 * c
         y2 = y3 + y2
         out = self.out_conv(y2)
@@ -683,7 +606,6 @@ class MambaSISR6(nn.Module):
                         common.default_conv(int(dim*2**1), out_channels, 3)]
         self.tail = nn.Sequential(*modules_tail)
 
-        #self.output = nn.Conv2d(int(dim*2**1), out_channels, kernel_size=3, stride=1, padding=1, bias=bias)
 
     def forward(self, inp_img):
 
@@ -721,15 +643,13 @@ class MambaSISR6(nn.Module):
         return out_dec_level1
 
 
-    def flops(self, shape=(3, 256, 256)):
+    def flops(self, shape=(3, 64, 64)):
         # shape = self.__input_shape__[1:]
         supported_ops={
             "aten::silu": None, # as relu is in _IGNORED_OPS
             "aten::neg": None, # as relu is in _IGNORED_OPS
             "aten::exp": None, # as relu is in _IGNORED_OPS
             "aten::flip": None, # as permute is in _IGNORED_OPS
-            # "prim::PythonOp.CrossScan": None,
-            # "prim::PythonOp.CrossMerge": None,
             "prim::PythonOp.SelectiveScan": selective_scan_flop_jit,
         }
 
@@ -741,7 +661,6 @@ class MambaSISR6(nn.Module):
         Gflops, unsupported = flop_count(model=model, inputs=(input,), supported_ops=supported_ops)
 
         del model, input
-        #return sum(Gflops.values()) * 1e9
         return f"params(M) {params/1e6} GFLOPs {sum(Gflops.values())}"
 
 

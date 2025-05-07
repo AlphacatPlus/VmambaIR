@@ -44,8 +44,7 @@ Image Deraining
 
 1. Datasets
 1. Models
-1. Training
-1. Testing
+1. [Installation](#Installation)
 1. [Results](#results)
 1. [Citation](#citation)
 1. [Acknowledgements](#acknowledgements)
@@ -115,6 +114,38 @@ We achieved state-of-the-art performance on multiple image restoration tasks. De
 </p>
 
 </details>
+
+
+## <a name="Installation"></a> 🔧 Installation
+
+This repository is built in PyTorch 2.3.0 and tested on Debian 11 environment (Python3.9, CUDA12.1).
+Follow these intructions
+
+1. Clone our repository
+```
+git clone https://github.com/AlphacatPlus/VmambaIR.git
+cd VmambaIR
+```
+
+2. Make conda environment
+```
+conda create -n vmambair python=3.9
+conda activate vmambair
+```
+
+3. Install dependencies
+```
+cd VmambaIR
+pip install -r requirements.txt -i https://mirrors.aliyun.com/pypi/simple/
+
+```
+
+4. Install mamba
+```
+cd Mamba
+cd kernels/selective_scan && pip install .
+```
+
 
 ## <a name="citation"></a>📎 Citation
 

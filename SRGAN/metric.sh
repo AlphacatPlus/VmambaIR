@@ -18,7 +18,7 @@ folder_restored=/mnt/bn/shiyuan-arnold/code/Mamber/DiffIR/DiffIR-SRGAN/results/t
 #folder_restored=/mnt/bn/shiyuan-arnold/code/VmambaIR/SRGAN/results/test_MambaSISR15GAN3/visualization/DIV2K100
 
 
-python3  metrics/LPIPS.py \
+python3  Metrics/LPIPS.py \
     --folder_gt $folder_gt  \
     --folder_restored $folder_restored
 

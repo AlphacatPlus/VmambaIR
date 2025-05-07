@@ -6,12 +6,9 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from pdb import set_trace as stx
 import numbers
 
 from einops import rearrange, repeat
-from functools import partial
-from timm.models.layers import DropPath, trunc_normal_
 
 import VmambaIR.archs.common as common
 
@@ -19,9 +16,8 @@ from basicsr.utils.registry import ARCH_REGISTRY
 
 import math
 import copy
-from fvcore.nn import FlopCountAnalysis, flop_count_str, flop_count, parameter_count
+from fvcore.nn import flop_count, parameter_count
 
-# import mamba_ssm.selective_scan_fn (in which causal_conv1d is needed)
 try:
     "sscore acts the same as mamba_ssm"
     SSMODE = "sscore"
@@ -32,9 +28,6 @@ except Exception as e:
     SSMODE = "mamba_ssm"
     import selective_scan_cuda
 
-#from selective_scan import selective_scan_fn as selective_scan_fn_v1
-
-######v1 selective_scan_fn_v1
 
 import selective_scan_cuda_core as selective_scan_cuda
 
@@ -84,7 +77,6 @@ class SelectiveScanFn(torch.autograd.Function):
             dout = dout.contiguous()
         du, ddelta, dA, dB, dC, dD, ddelta_bias, *rest = selective_scan_cuda.bwd(
             u, delta, A, B, C, D, delta_bias, dout, x, ctx.delta_softplus, 1
-            # u, delta, A, B, C, D, delta_bias, dout, x, ctx.delta_softplus, ctx.nrows,
         )
         dB = dB.squeeze(1) if getattr(ctx, "squeeze_B", False) else dB
         dC = dC.squeeze(1) if getattr(ctx, "squeeze_C", False) else dC
@@ -115,7 +107,6 @@ def selective_scan_fn_v1(u, delta, A, B, C, D=None, delta_bias=None, delta_softp
 
 
 # fvcore flops =======================================
-
 def flops_selective_scan_fn(B=1, L=256, D=768, N=16, with_D=True, with_Z=False, with_Group=True, with_complex=False):
     """
     u: r(B D L)
@@ -158,7 +149,6 @@ def selective_scan_flop_jit(inputs, outputs):
 
 ##########################################################################
 ## Layer Norm
-
 def to_3d(x):
     return rearrange(x, 'b c h w -> b (h w) c')
 
@@ -273,8 +263,6 @@ class Attention(nn.Module):
 
         out = self.project_out(out)
         return out
-
-# cross selective scan ===============================
 
 class SelectiveScan(torch.autograd.Function):
     
@@ -446,9 +434,7 @@ def cross_selective_scan(
     return y
 
 
-#################
 #channel scan
-#################
 class CrossScanC(torch.autograd.Function):
     #input:b,d,l output:b,2,d,l
     @staticmethod
@@ -592,10 +578,7 @@ class SS2D_1(nn.Module):
         self.d_state = math.ceil(d_model / 6) if d_state == "auto" else d_state # 20240109
         self.d_conv = d_conv
 
-        # forward_type =======================================
-        #self.forward_core = dict(
-        #    v2=self.forward_corev2,
-        #).get(forward_type, self.forward_corev2)
+
         self.forward_core=self.forward_corev1
 
         self.K = 4 if forward_type not in ["share_ssm"] else 1
@@ -605,11 +588,9 @@ class SS2D_1(nn.Module):
 
         self.cforward_core = self.cforward_corev2
         self.pooling = nn.AdaptiveAvgPool2d(1)
-        #self.channel_norm = nn.LayerNorm(d_inner)
         self.channel_norm = LayerNorm(d_inner, LayerNorm_type='WithBias')
 
         # in proj =======================================
-        #self.in_proj = nn.Linear(d_model, d_expand * 2, bias=bias, **factory_kwargs)
         self.in_conv = nn.Conv2d(in_channels=d_model, out_channels=d_expand * 2, kernel_size=1, stride=1, padding=0)
         self.act: nn.Module = act_layer()
         
@@ -676,12 +657,10 @@ class SS2D_1(nn.Module):
         self.Dsc = self.D_init(1, copies=self.K2C, merge=True) # (K * D)
 
         # out proj =======================================
-        #self.out_proj = nn.Linear(d_expand, d_model, bias=bias, **factory_kwargs)
         self.out_conv = nn.Conv2d(in_channels=d_expand, out_channels=d_model, kernel_size=1, stride=1, padding=0)
         self.dropout = nn.Dropout(dropout) if dropout > 0. else nn.Identity()
 
         if simple_init:
-            # simple init dt_projs, A_logs, Ds
             self.Ds = nn.Parameter(torch.ones((self.K2 * d_inner)))
             self.A_logs = nn.Parameter(torch.randn((self.K2 * d_inner, self.d_state))) # A == -A_logs.exp() < 0; # 0 < exp(A * dt) < 1
             self.dt_projs_weight = nn.Parameter(torch.randn((self.K, d_inner, self.dt_rank)))
@@ -709,8 +688,6 @@ class SS2D_1(nn.Module):
         inv_dt = dt + torch.log(-torch.expm1(-dt))
         with torch.no_grad():
             dt_proj.bias.copy_(inv_dt)
-        # Our initialization would set all Linear.bias to zero, need to mark this one as _no_reinit
-        # dt_proj.bias._no_reinit = True
         
         return dt_proj
 
@@ -750,18 +727,14 @@ class SS2D_1(nn.Module):
         L = H * W
 
         def cross_scan_2d(x):
-            # (B, C, H, W) => (B, K, C, H * W) with K = len([HW, WH, FHW, FWH])
-            x_hwwh = torch.stack([x.flatten(2, 3), x.transpose(dim0=2, dim1=3).contiguous().flatten(2, 3)], dim=1) #一个h,w展开，一个w,h展开，然后堆在一起
-            xs = torch.cat([x_hwwh, torch.flip(x_hwwh, dims=[-1])], dim=1) # (b, k, d, l) #把上面那俩再翻译下，然后堆在一起
+            x_hwwh = torch.stack([x.flatten(2, 3), x.transpose(dim0=2, dim1=3).contiguous().flatten(2, 3)], dim=1) 
+            xs = torch.cat([x_hwwh, torch.flip(x_hwwh, dims=[-1])], dim=1)
             return xs 
         
-        #四个方向
         if self.K == 4:
-            # K = 4
-            xs = cross_scan_2d(x) # (b, k, d, l) #[batch_size, 4, channels, height * width]
+            xs = cross_scan_2d(x)
 
             x_dbl = torch.einsum("b k d l, k c d -> b k c l", xs, self.x_proj_weight)
-            # x_dbl = x_dbl + self.x_proj_bias.view(1, K, -1, 1)
             dts, Bs, Cs = torch.split(x_dbl, [self.dt_rank, self.d_state, self.d_state], dim=2)
             dts = torch.einsum("b k r l, k d r -> b k d l", dts, self.dt_projs_weight)
 
@@ -771,9 +744,6 @@ class SS2D_1(nn.Module):
             Ds = self.Ds # (k * d)
             dt_projs_bias = self.dt_projs_bias.view(-1) # (k * d)
 
-            # assert len(xs.shape) == 3 and len(dts.shape) == 3 and len(Bs.shape) == 4 and len(Cs.shape) == 4
-            # assert len(As.shape) == 2 and len(Ds.shape) == 1 and len(dt_projs_bias.shape) == 1
-            # print(self.Ds.dtype, self.A_logs.dtype, self.dt_projs_bias.dtype, flush=True) # fp16, fp16, fp16
 
             out_y = self.selective_scan(
                 xs, dts, 
@@ -781,12 +751,9 @@ class SS2D_1(nn.Module):
                 delta_bias=dt_projs_bias,
                 delta_softplus=True,
             ).view(B, 4, -1, L)
-            # assert out_y.dtype == torch.float16
 
-        # if this shows potential, we can raise the speed later by modifying selective_scan
         elif self.K == 1:
             x_dbl = torch.einsum("b d l, c d -> b c l", x.view(B, -1, L), self.x_proj_weight[0])
-            # x_dbl = x_dbl + self.x_proj_bias.view(1, -1, 1)
             dt, BC = torch.split(x_dbl, [self.dt_rank, 2 * self.d_state], dim=1)
             dt = torch.einsum("b r l, d r -> b d l", dt, self.dt_projs_weight[0])
             x_dt_BC = torch.cat([x, dt.view(B, -1, H, W), BC.view(B, -1, H, W)], dim=1) # (b, -1, h, w)
@@ -800,16 +767,12 @@ class SS2D_1(nn.Module):
             Ds = self.Ds.repeat(4) # (k * d)
             dt_projs_bias = self.dt_projs_bias.view(-1).repeat(4) # (k * d)
 
-            # assert len(xs.shape) == 3 and len(dts.shape) == 3 and len(Bs.shape) == 4 and len(Cs.shape) == 4
-            # assert len(As.shape) == 2 and len(Ds.shape) == 1 and len(dt_projs_bias.shape) == 1
-
             out_y = self.selective_scan(
                 xs, dts, 
                 As, Bs, Cs, Ds,
                 delta_bias=dt_projs_bias,
                 delta_softplus=True,
             ).view(B, 4, -1, L)
-            # assert out_y.dtype == torch.float16
 
         inv_y = torch.flip(out_y[:, 2:4], dims=[-1]).view(B, 2, -1, L)
         wh_y = torch.transpose(out_y[:, 1].view(B, -1, W, H), dim0=2, dim1=3).contiguous().view(B, -1, L)
@@ -854,8 +817,6 @@ class SS2D_1(nn.Module):
         return xc
 
     def forward(self, x: torch.Tensor, **kwargs):
-        #input: b,d,h,w
-        #output: b,d,h,w
         xz = self.in_conv(x)
         x, z = xz.chunk(2, dim=1) # (b, d, h, w)
         if not self.softmax_version:
@@ -863,7 +824,7 @@ class SS2D_1(nn.Module):
         x = self.act(self.conv2d(x)) # (b, d, h, w)
         y1 = self.forward_core(x)
         y2 = y1 * z
-        c = self.cforward_core(y2, channel_first=True)#x:b,d,h,w; output:b,d,1,1
+        c = self.cforward_core(y2, channel_first=True)
         y3 = y2 * c
         y2 = y3 + y2
         out = self.out_conv(y2)
@@ -876,7 +837,6 @@ class MamberBlock(nn.Module):
         super(MamberBlock, self).__init__()
 
         self.norm1 = LayerNorm(dim, LayerNorm_type)
-        #self.attn = Attention(dim, num_heads, bias)
         self.attn = SS2D_1(d_model=dim, ssm_ratio=1)
         self.norm2 = LayerNorm(dim, LayerNorm_type)
         self.ffn = FeedForward(dim, ffn_expansion_factor, bias)
@@ -980,7 +940,6 @@ class MambaRealSR11(nn.Module):
                         common.default_conv(int(dim*2**1), out_channels, 3)]
         self.tail = nn.Sequential(*modules_tail)
 
-        #self.output = nn.Conv2d(int(dim*2**1), out_channels, kernel_size=3, stride=1, padding=1, bias=bias)
 
     def forward(self, inp_img):
 
@@ -1018,15 +977,12 @@ class MambaRealSR11(nn.Module):
         return out_dec_level1
 
 
-    def flops(self, shape=(3, 256, 256)):
-        # shape = self.__input_shape__[1:]
+    def flops(self, shape=(3, 64, 64)):
         supported_ops={
             "aten::silu": None, # as relu is in _IGNORED_OPS
             "aten::neg": None, # as relu is in _IGNORED_OPS
             "aten::exp": None, # as relu is in _IGNORED_OPS
             "aten::flip": None, # as permute is in _IGNORED_OPS
-            # "prim::PythonOp.CrossScan": None,
-            # "prim::PythonOp.CrossMerge": None,
             "prim::PythonOp.SelectiveScan": selective_scan_flop_jit,
         }
 
@@ -1042,5 +998,5 @@ class MambaRealSR11(nn.Module):
         return f"params(M) {params/1e6} GFLOPs {sum(Gflops.values())}"
 
 
-#if __name__ == "__main__":
-#    print(MambaRealSR11().flops())
+if __name__ == "__main__":
+    print(MambaRealSR11().flops())

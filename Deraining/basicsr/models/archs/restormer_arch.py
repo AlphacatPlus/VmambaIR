@@ -292,9 +292,6 @@ class Restormer(nn.Module):
             "aten::neg": None, # as relu is in _IGNORED_OPS
             "aten::exp": None, # as relu is in _IGNORED_OPS
             "aten::flip": None, # as permute is in _IGNORED_OPS
-            # "prim::PythonOp.CrossScan": None,
-            # "prim::PythonOp.CrossMerge": None,
-            #"prim::PythonOp.SelectiveScan": selective_scan_flop_jit,
         }
 
         model = copy.deepcopy(self)
@@ -305,7 +302,6 @@ class Restormer(nn.Module):
         Gflops, unsupported = flop_count(model=model, inputs=(input,), supported_ops=supported_ops)
 
         del model, input
-        #return sum(Gflops.values()) * 1e9
         return f"params(M) {params/1e6} GFLOPs {sum(Gflops.values())}"
 
 

@@ -15,16 +15,16 @@ conda create -n vmambair python=3.9
 conda activate vmambair
 ```
 
-3. Install mamba dependencies
+3. Install dependencies
 ```
-cd mamba
-pip install -r requirements.txt
+cd VmambaIR
+pip install -r requirements.txt -i https://mirrors.aliyun.com/pypi/simple/
+
+```
+
+4. Install mamba
+```
+cd Mamba
 cd kernels/selective_scan && pip install .
 ```
 
-4. Install other dependencies
-```
-cd SRGAN #cd RealSR/Deraining
-bash pip.sh
-
-```
