@@ -6,11 +6,12 @@
 
 [Yuan Shi](https://github.com/shiyuan7), [Bin Xia](https://github.com/Zj-BinXia), [Xiaoyu Jin](https://github.com/xyjin01), Xing Wang, Tianyu Zhao, Xin Xia, Xuefeng Xiao, and [Wenming Yang](https://scholar.google.com/citations?user=vsE4nKcAAAAJ&hl=zh-CN), "VmambaIR: Visual State Space Model for Image Restoration", arXiv, 2024
 
-[[arXiv](https://arxiv.org/abs/2403.11423)] [[supplementary material]()] [[visual results]()] [pretrained models]
+[[arXiv](https://arxiv.org/abs/2403.11423)] [[supplementary material]()] [[visual results]()]
 
 #### 🔥🔥🔥 News
 
 - **2024-03-18:** This repo is released.
+- **2025-05-08:** We released the pretrained models [Google Drive](https://drive.google.com/drive/folders/10Pogbp2hkCadGPcuCrlxaZXHt68JAQ3d?usp=sharing) .
 
 ---
 
