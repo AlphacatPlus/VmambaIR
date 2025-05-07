@@ -43,7 +43,7 @@ Image Deraining
 ## 🔗 Contents
 
 1. Datasets
-1. Models
+1. [Models](#Model)
 1. [Installation](#Installation)
 1. [Results](#results)
 1. [Citation](#citation)
@@ -145,6 +145,11 @@ pip install -r requirements.txt -i https://mirrors.aliyun.com/pypi/simple/
 cd Mamba
 cd kernels/selective_scan && pip install .
 ```
+
+
+## <a name="Model"></a>📃 Model
+Our models are available here [Google Drive](https://drive.google.com/drive/folders/10Pogbp2hkCadGPcuCrlxaZXHt68JAQ3d?usp=sharing). 
+
 
 
 ## <a name="citation"></a>📎 Citation
