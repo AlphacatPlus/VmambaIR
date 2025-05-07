@@ -36,10 +36,6 @@ Image Deraining
 ---
 
 
-## ⚒️ TODO
-
-* [ ] Release code and pretrained models
-
 ## 🔗 Contents
 
 1. Datasets
